@@ -45,6 +45,8 @@ GITA_MOCK_LLM=1 streamlit run app.py     # look around without Ollama (placehold
 The root `app.py` is the deployment entrypoint. The deployment uses Gemini for answers and the
 lightweight TF-IDF embedder to avoid downloading a neural model during cloud startup. A fresh
 deployment builds its local Chroma index from the checked-in `data/gita_verses.json` on first start.
+If the Chroma directory exists but the `gita` collection is missing, startup builds the collection
+instead of failing; existing collections are kept as-is.
 
 1. Push this project to a GitHub repository you control. Do not commit `.env`, API keys,
    `.streamlit/secrets.toml`, `.venv`, or `data/chroma`.

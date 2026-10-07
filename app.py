@@ -8,22 +8,46 @@ from pathlib import Path
 from streamlit.errors import StreamlitSecretNotFoundError
 
 # Add project root to path so config and src imports work seamlessly
-ROOT_DIR = Path(__file__).resolve().parent.parent
+ROOT_DIR = Path(__file__).resolve().parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
-
-from src.generate import LLMUnavailable, call_ollama
-from src.generate import call_gemini
-from src import config
-from src.logging_config import configure_logging
-from src.pipeline import answer_question
-from src.request_context import bind_request_context, classify_client_source
-from src.retrieve import get_retriever
 
 try:
     secrets = dict(st.secrets)
 except StreamlitSecretNotFoundError:
     secrets = {}
+
+# Cloud deployments do not include the local Chroma index. Use TF-IDF there
+# unless the deployment explicitly selects another embedder.
+if secrets.get("GITA_EMBEDDER"):
+    os.environ.setdefault("GITA_EMBEDDER", secrets["GITA_EMBEDDER"])
+elif not os.getenv("GITA_EMBEDDER"):
+    chroma_dir = ROOT_DIR / "data" / "chroma"
+    collection_exists = False
+    if chroma_dir.exists():
+        import chromadb
+
+        client = chromadb.PersistentClient(path=str(chroma_dir))
+        collection_names = {
+            getattr(collection, "name", collection)
+            for collection in client.list_collections()
+        }
+        collection_exists = "gita" in collection_names
+        if collection_exists:
+            metadata = client.get_collection("gita").metadata or {}
+            if metadata.get("embedder"):
+                os.environ["GITA_EMBEDDER"] = metadata["embedder"]
+    if not collection_exists:
+        os.environ["GITA_EMBEDDER"] = "tfidf"
+
+from src.generate import LLMUnavailable, call_ollama
+from src.generate import call_gemini
+from src import config
+from src.deployment import ensure_chroma_collection
+from src.logging_config import configure_logging
+from src.pipeline import answer_question
+from src.request_context import bind_request_context, classify_client_source
+from src.retrieve import get_retriever
 
 configure_logging()
 
@@ -86,10 +110,20 @@ else:
 gemini_api_key = secrets.get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", ""))
 
 # Load cached retriever instance
+@st.cache_resource(show_spinner="Preparing the verse search index...")
+def load_retriever():
+    if ensure_chroma_collection():
+        get_retriever.cache_clear()
+    return get_retriever()
+
+
 try:
-    retriever_inst = get_retriever()
+    retriever_inst = load_retriever()
 except Exception as e:
-    st.error(f"Failed to initialize retriever. Ensure vector DB and verses dataset exist: {e}")
+    st.error(
+        "Failed to initialize the verse search index. The app will build the ChromaDB "
+        f"collection from the verse dataset when available. Details: {e}"
+    )
     st.stop()
 
 # ==========================================

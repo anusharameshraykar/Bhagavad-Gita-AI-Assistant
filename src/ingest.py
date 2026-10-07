@@ -18,16 +18,12 @@ def search_text(verse: dict) -> str:
     return "\n".join(verse[f] for f in config.SEARCH_FIELDS if verse.get(f))
 
 
-def main() -> None:
+def build_collection(client: chromadb.ClientAPI) -> None:
     verses = json.loads(config.VERSES_PATH.read_text(encoding="utf-8"))
     texts = [search_text(v) for v in verses]
     print(f"Embedding {len(texts)} verses with '{config.EMBEDDER}' ...")
     vectors = get_embedder().embed_documents(texts)
 
-    # start from a clean store so stale vectors from another embedder can't linger
-    if config.CHROMA_DIR.exists():
-        shutil.rmtree(config.CHROMA_DIR)
-    client = chromadb.PersistentClient(path=str(config.CHROMA_DIR))
     col = client.create_collection(
         config.COLLECTION,
         metadata={"hnsw:space": "cosine", "embedder": config.EMBEDDER},
@@ -39,6 +35,14 @@ def main() -> None:
         metadatas=[{"chapter": v["chapter"], "verse": v["verse"]} for v in verses],
     )
     print(f"Stored {col.count()} verses in {config.CHROMA_DIR}")
+
+
+def main() -> None:
+    # start from a clean store so stale vectors from another embedder can't linger
+    if config.CHROMA_DIR.exists():
+        shutil.rmtree(config.CHROMA_DIR)
+    client = chromadb.PersistentClient(path=str(config.CHROMA_DIR))
+    build_collection(client)
 
 
 if __name__ == "__main__":

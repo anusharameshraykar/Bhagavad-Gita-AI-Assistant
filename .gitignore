@@ -4,5 +4,6 @@ __pycache__/
 .env
 .streamlit/secrets.toml
 data/chroma/
+data/tfidf.pkl
 data/raw/
 .DS_Store
