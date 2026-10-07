@@ -1,0 +1,4 @@
+-r requirements.txt
+sentence-transformers   # neural embeddings for local/high-quality retrieval
+torchvision             # required by Transformers' vision/image-processor imports
+pytest                  # tests only

@@ -1,0 +1,7 @@
+# Runtime dependencies (also used by Streamlit Community Cloud)
+chromadb>=0.5
+rank-bm25>=0.2.2
+numpy
+scikit-learn            # used by the lightweight "tfidf" embedder
+langgraph>=0.2,<2        # orchestrates the fixed question-answer workflow
+streamlit
