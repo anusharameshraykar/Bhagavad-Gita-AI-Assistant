@@ -67,8 +67,17 @@ def test_alternate_app_gemini_provider_exposes_model_selector():
     assert any(widget.label == "Gemini model" for widget in at.text_input)
 
 
-def test_groq_provider_exposes_model_selector():
+def test_model_options_are_hidden_until_toggled():
     at = run_app()
+    assert not at.exception
+    assert at.toggle[0].label == "Show model options"
+    assert not at.toggle[0].value
+    assert not any(widget.label == "LLM provider" for widget in at.selectbox)
+    assert not any(widget.label in {"Gemini model", "Groq model", "Ollama model"} for widget in at.text_input)
+
+    at.toggle[0].set_value(True).run()
+    assert not at.exception
+    assert at.selectbox[0].options == ["Gemini", "Groq", "Ollama"]
     at.selectbox[0].select("Groq").run()
     assert not at.exception
     assert any(widget.label == "Groq model" for widget in at.text_input)
