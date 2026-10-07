@@ -5,3 +5,4 @@ numpy
 scikit-learn==1.9.1     # keep compatible with the packaged TF-IDF model
 langgraph>=0.2,<2        # orchestrates the fixed question-answer workflow
 streamlit
+groq>=0.9

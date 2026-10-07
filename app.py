@@ -42,8 +42,7 @@ else:
     if not collection_exists:
         config.EMBEDDER = "tfidf"
 
-from src.generate import LLMUnavailable, call_ollama
-from src.generate import call_gemini
+from src.generate import LLMUnavailable, call_gemini, call_groq, call_ollama
 from src.deployment import ensure_chroma_collection
 from src.logging_config import configure_logging
 from src.pipeline import answer_question
@@ -93,8 +92,13 @@ def render_web_sources(sources: list[dict[str, str]]) -> None:
 # --- Sidebar Navigation ---
 st.sidebar.title("🕉️ Gita AI Assistant")
 app_mode = st.sidebar.radio("Select View", ["Gita Chatbot", "Search Sholkas"])
-provider_options = ["Gemini", "Ollama"]
-default_provider = 0 if secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY") else 1
+provider_options = ["Gemini", "Groq", "Ollama"]
+if secrets.get("GROQ_API_KEY") or os.getenv("GROQ_API_KEY"):
+    default_provider = provider_options.index("Groq")
+elif secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY"):
+    default_provider = provider_options.index("Gemini")
+else:
+    default_provider = provider_options.index("Ollama")
 provider = st.sidebar.selectbox(
     "LLM provider",
     provider_options,
@@ -102,6 +106,8 @@ provider = st.sidebar.selectbox(
 )
 if provider == "Gemini":
     model = st.sidebar.text_input("Gemini model", value=config.GEMINI_MODEL)
+elif provider == "Groq":
+    model = st.sidebar.text_input("Groq model", value=config.GROQ_MODEL)
 else:
     model = st.sidebar.text_input(
         "Ollama model",
@@ -109,6 +115,7 @@ else:
         help="Must already be pulled: ollama pull <name>",
     )
 gemini_api_key = secrets.get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", ""))
+groq_api_key = secrets.get("GROQ_API_KEY", os.getenv("GROQ_API_KEY", ""))
 
 # Load cached retriever instance
 @st.cache_resource(show_spinner="Preparing the verse search index...")
@@ -177,6 +184,12 @@ if app_mode == "Gita Chatbot":
                             model=model,
                         )
                         if provider == "Gemini"
+                        else functools.partial(
+                            call_groq,
+                            api_key=groq_api_key,
+                            model=model,
+                        )
+                        if provider == "Groq"
                         else functools.partial(call_ollama, model=model)
                     )
                     with bind_request_context(

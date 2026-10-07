@@ -42,12 +42,13 @@ MAX_RELEVANT_VECTOR_DISTANCE = 0.45  # larger distances trigger the optional web
 # ---- Generation ---------------------------------------------------------------
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.getenv("GITA_MODEL", "qwen2.5:7b")   # chosen by the evaluation run
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
 LLM_TEMPERATURE = 0.2     # low = sticks to the sources
 LLM_TIMEOUT_S = 300       # first call can be slow while Ollama loads the model
 MAX_RETRIES = 1           # re-ask once if the citation check fails
-GEMINI_MAX_ATTEMPTS = 1   # retry transient service-unavailable responses
-GEMINI_RETRY_DELAY_S = 1.0
+GEMINI_MAX_ATTEMPTS = 2   # retry transient service-unavailable responses
+GEMINI_RETRY_DELAY_S = 2.0
 
 # Shown when the question looks like a self-harm crisis (the LLM is NOT called).
 # Add a verified local helpline here before sharing the app publicly.

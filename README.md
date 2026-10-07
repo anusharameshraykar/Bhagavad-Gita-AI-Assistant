@@ -7,7 +7,7 @@ Current status: setup, data, retrieval, generation + citation checks, evaluation
 python3 -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -r requirements-local.txt
 ```
-(Local Ollama is optional if you choose Gemini in the app.)
+(Local Ollama is optional if you choose Gemini or Groq in the app.)
 
 ## Run
 ```bash
@@ -29,7 +29,7 @@ GITA_MOCK_LLM=1 streamlit run app.py     # look around without Ollama (placehold
 - **Chat page:** ask a question; cited verses appear as tappable cards (Sanskrit, transliteration, translation).
   Crisis messages, medical/financial decisions, and religion/politics questions get fixed replies with no verse cards.
 - **Search Sholkas** (sidebar): read any verse directly; no AI involved.
-- Sidebar: choose Gemini or Ollama, the model, number of verses retrieved, and debug info.
+- Sidebar: choose Gemini, Groq, or Ollama, the model, number of verses retrieved, and debug info.
 - Open on your phone (same Wi-Fi): use the "Network URL" Streamlit prints.
 - Hybrid retrieval does not trigger an LLM relevance check when it already has usable verses within
   the relevance cutoff. Only empty or weak hybrid retrieval leads to an LLM check: if the question is
@@ -42,9 +42,9 @@ GITA_MOCK_LLM=1 streamlit run app.py     # look around without Ollama (placehold
 
 ## Deploy publicly (Streamlit Community Cloud)
 
-The root `app.py` is the deployment entrypoint. The deployment uses Gemini for answers and the
-lightweight TF-IDF embedder. The prebuilt Chroma index and fitted TF-IDF model are packaged with
-the app so deployment startup reuses them instead of generating embeddings. The app fails clearly
+The root `app.py` is the deployment entrypoint. Gemini and Groq hosted APIs are available for
+answers alongside the lightweight TF-IDF embedder. The prebuilt Chroma index and fitted TF-IDF model are packaged with the app so deployment startup
+reuses them instead of generating embeddings. The app fails clearly
 if the packaged collection is missing; it never starts a CPU-heavy index build during deployment.
 Startup logs show whether the collection was found and reused.
 
@@ -62,12 +62,22 @@ used to produce/read these artifacts.
    `.streamlit/secrets.toml`, or `.venv`.
 2. In Streamlit Community Cloud, create an app from that repository and set the main file to
    `app.py`. It installs the lean runtime dependencies from `requirements.txt`.
-3. Add this in the app's **Secrets** settings, replacing the placeholder with a key from Google AI
-   Studio:
+3. Add the key for the hosted provider you want to use in the app's **Secrets** settings.
+   For Gemini, replace the placeholder with a key from Google AI Studio:
 
    ```toml
    GEMINI_API_KEY = "your-gemini-api-key"
    ```
+
+   For Groq, create an API key in [GroqCloud](https://console.groq.com/keys):
+
+   ```toml
+   GROQ_API_KEY = "your-groq-api-key"
+   ```
+
+   Groq provides free-tier usage subject to account/model rate limits. The app defaults to Groq
+   when `GROQ_API_KEY` is present, using `openai/gpt-oss-20b`; you can change the model in the
+   sidebar or set `GROQ_MODEL`.
 
    Optional web-search fallback (Tavily):
 
@@ -75,8 +85,9 @@ used to produce/read these artifacts.
    TAVILY_API_KEY = "your-tavily-api-key"
    ```
 
-   The LLM provider defaults to Gemini when `GEMINI_API_KEY` is present. Without Tavily, a selected
-   web-search action returns a clear unavailable message; verse answering continues to work.
+   The app defaults to Groq when `GROQ_API_KEY` is present; otherwise it defaults to Gemini when
+   `GEMINI_API_KEY` is present, then to Ollama. Without Tavily, a selected web-search action
+   returns a clear unavailable message; verse answering continues to work.
    Transient Gemini HTTP 503 responses are attempted up to three times with exponential backoff;
    persistent errors are shown so you can try again later or switch to Ollama.
 4. Deploy, then test a direct verse lookup, a normal question, and the app's safety responses.

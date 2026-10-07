@@ -67,6 +67,13 @@ def test_alternate_app_gemini_provider_exposes_model_selector():
     assert any(widget.label == "Gemini model" for widget in at.text_input)
 
 
+def test_groq_provider_exposes_model_selector():
+    at = run_app()
+    at.selectbox[0].select("Groq").run()
+    assert not at.exception
+    assert any(widget.label == "Groq model" for widget in at.text_input)
+
+
 def test_crisis_message_shows_support_text_and_no_verse_cards():
     at = run_app()
     at.chat_input[0].set_value("I want to end my life").run()

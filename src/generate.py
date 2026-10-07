@@ -1,8 +1,6 @@
-"""The prompt and the LLM call.
+"""Prompt construction and LLM provider calls.
 
-`call_ollama(messages)` is the ONLY place that talks to an LLM. To switch to Groq,
-Gemini, Claude etc. later, write another function with the same signature
-(list of {"role","content"} dicts in, answer string out) and pass it as `llm=`.
+Provider functions accept a list of {"role","content"} messages and return an answer string.
 """
 from __future__ import annotations
 
@@ -12,6 +10,8 @@ import time
 import urllib.error
 import urllib.request
 from urllib.parse import urlencode
+
+from groq import APIConnectionError, APIStatusError, Groq
 
 from src import config
 
@@ -161,3 +161,45 @@ def call_gemini(
         raise LLMUnavailable(f"Could not reach the Gemini API: {exc}") from exc
     except (KeyError, TypeError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise LLMUnavailable("Gemini returned an unreadable response.") from exc
+
+
+def call_groq(
+    messages: list[dict],
+    api_key: str,
+    model: str | None = None,
+) -> str:
+    """Call Groq's OpenAI-compatible chat completions API."""
+    if not api_key:
+        raise LLMUnavailable("Groq is selected but GROQ_API_KEY is not configured.")
+
+    model = model or config.GROQ_MODEL
+    logger.info("Sending generation request to Groq model %s.", model)
+    try:
+        client = Groq(api_key=api_key, timeout=config.LLM_TIMEOUT_S)
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=config.LLM_TEMPERATURE,
+        )
+        text = response.choices[0].message.content
+        if not isinstance(text, str) or not text.strip():
+            raise LLMUnavailable("Groq returned no text in its response.")
+        text = text.strip()
+        logger.info("Groq returned an answer (%d characters).", len(text))
+        return text
+    except APIStatusError as exc:
+        detail = str(exc.body or exc.message)[:300]
+        if exc.status_code == 403 and "1010" in detail:
+            ray_id = exc.response.headers.get("cf-ray")
+            ray_detail = f" Cloudflare Ray ID: {ray_id}." if ray_id else ""
+            raise LLMUnavailable(
+                "Groq returned HTTP 403 (Cloudflare error 1010). Cloudflare denied "
+                "this request based on its client signature, before model inference. "
+                "The app is now using Groq's official Python client. If this persists, "
+                "try another network or contact Groq support with the response details."
+                f"{ray_detail} "
+                f"Response: {detail}"
+            ) from exc
+        raise LLMUnavailable(f"Groq returned HTTP {exc.status_code}: {detail}") from exc
+    except (APIConnectionError, TimeoutError) as exc:
+        raise LLMUnavailable(f"Could not reach the Groq API: {exc}") from exc
