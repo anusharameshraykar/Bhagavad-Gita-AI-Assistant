@@ -46,6 +46,8 @@ GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 LLM_TEMPERATURE = 0.2     # low = sticks to the sources
 LLM_TIMEOUT_S = 300       # first call can be slow while Ollama loads the model
 MAX_RETRIES = 1           # re-ask once if the citation check fails
+GEMINI_MAX_ATTEMPTS = 1   # retry transient service-unavailable responses
+GEMINI_RETRY_DELAY_S = 1.0
 
 # Shown when the question looks like a self-harm crisis (the LLM is NOT called).
 # Add a verified local helpline here before sharing the app publicly.

@@ -46,7 +46,8 @@ The root `app.py` is the deployment entrypoint. The deployment uses Gemini for a
 lightweight TF-IDF embedder to avoid downloading a neural model during cloud startup. A fresh
 deployment builds its local Chroma index from the checked-in `data/gita_verses.json` on first start.
 If the Chroma directory exists but the `gita` collection is missing, startup builds the collection
-instead of failing; existing collections are kept as-is.
+instead of failing; existing collections are kept as-is. Startup logs show whether the collection
+was reused or rebuilt, plus embedder initialization, embedding-generation, and index-write timings.
 
 1. Push this project to a GitHub repository you control. Do not commit `.env`, API keys,
    `.streamlit/secrets.toml`, `.venv`, or `data/chroma`.
@@ -67,6 +68,8 @@ instead of failing; existing collections are kept as-is.
 
    The LLM provider defaults to Gemini when `GEMINI_API_KEY` is present. Without Tavily, a selected
    web-search action returns a clear unavailable message; verse answering continues to work.
+   Transient Gemini HTTP 503 responses are attempted up to three times with exponential backoff;
+   persistent errors are shown so you can try again later or switch to Ollama.
 4. Deploy, then test a direct verse lookup, a normal question, and the app's safety responses.
    Gemini usage is billed/limited according to your Google AI Studio account; review its quotas
    before sharing the public URL widely.

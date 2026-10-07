@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 import urllib.error
 import urllib.request
 from urllib.parse import urlencode
@@ -128,8 +129,24 @@ def call_gemini(
     )
     logger.info("Sending generation request to Gemini model %s.", model)
     try:
-        with urllib.request.urlopen(request, timeout=config.LLM_TIMEOUT_S) as response:
-            data = json.loads(response.read().decode("utf-8"))
+        for attempt in range(1, config.GEMINI_MAX_ATTEMPTS + 1):
+            try:
+                with urllib.request.urlopen(request, timeout=config.LLM_TIMEOUT_S) as response:
+                    data = json.loads(response.read().decode("utf-8"))
+                break
+            except urllib.error.HTTPError as exc:
+                detail = exc.read().decode("utf-8", "ignore")[:200]
+                if exc.code == 503 and attempt < config.GEMINI_MAX_ATTEMPTS:
+                    delay = config.GEMINI_RETRY_DELAY_S * (2 ** (attempt - 1))
+                    logger.warning(
+                        "Gemini returned HTTP 503; retrying in %.1f seconds (attempt %d/%d).",
+                        delay,
+                        attempt + 1,
+                        config.GEMINI_MAX_ATTEMPTS,
+                    )
+                    time.sleep(delay)
+                    continue
+                raise LLMUnavailable(f"Gemini returned HTTP {exc.code}: {detail}") from exc
         text = "".join(
             part["text"]
             for candidate in data["candidates"]
@@ -140,9 +157,6 @@ def call_gemini(
             raise LLMUnavailable("Gemini returned no text in its response.")
         logger.info("Gemini returned an answer (%d characters).", len(text))
         return text
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", "ignore")[:200]
-        raise LLMUnavailable(f"Gemini returned HTTP {exc.code}: {detail}") from exc
     except (urllib.error.URLError, TimeoutError) as exc:
         raise LLMUnavailable(f"Could not reach the Gemini API: {exc}") from exc
     except (KeyError, TypeError, UnicodeDecodeError, json.JSONDecodeError) as exc:
