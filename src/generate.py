@@ -1,4 +1,4 @@
-"""Stage 1c: the prompt and the LLM call.
+"""The prompt and the LLM call.
 
 `call_ollama(messages)` is the ONLY place that talks to an LLM. To switch to Groq,
 Gemini, Claude etc. later, write another function with the same signature

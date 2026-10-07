@@ -1,16 +1,15 @@
 # gita-rag — Bhagavad Gita Q&A with RAG (free, local-first)
 
-Built in stages. **Done so far: Stage 0 (setup), 1a (data), 1b (retrieval), 1c (generation + citation checks), 1d (evaluation + tuning), 1e (UI).**
-Next: Stage 2 (share with friends, feedback buttons).
+Current status: setup, data, retrieval, generation + citation checks, evaluation + tuning, and the UI are in place.
 
-## Setup (Stage 0)
+## Setup
 ```bash
 python3 -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -r requirements-local.txt
 ```
 (Local Ollama is optional if you choose Gemini in the app.)
 
-## Run (Stage 1a + 1b)
+## Run
 ```bash
 python -m src.build_data        # download + clean 701 verses -> data/gita_verses.json
 python -m src.ingest            # embed verses -> data/chroma  (first run downloads ~130 MB model)
@@ -21,7 +20,7 @@ python -m pytest -q tests       # unit tests (reference parser, tokenizer)
 Offline / no-download mode (weaker, for testing only): `GITA_EMBEDDER=tfidf python -m src.ingest`
 Multilingual mode (needs ~2 GB + more RAM): `GITA_EMBEDDER=bge-m3`. Re-run ingest after changing it.
 
-## Run the web app (Stage 1e)
+## Run the web app
 ```bash
 pip install -r requirements-local.txt
 streamlit run app.py                     # opens http://localhost:8501
@@ -73,9 +72,9 @@ deployment builds its local Chroma index from the checked-in `data/gita_verses.j
 For local use of the neural embedding model, install `requirements-local.txt`; cloud installs should
 use only `requirements.txt`.
 
-## Ask questions (Stage 1c) — needs Ollama running
+## Ask questions — needs Ollama running
 ```bash
-ollama pull qwen2.5:7b                       # default model (won the Stage 1d evaluation)
+ollama pull qwen2.5:7b                       # default model
 python -m src.ask "What is karma yoga?"
 python -m src.ask "How to control anger?" --debug          # shows retrieved verses + validation
 python -m src.ask "Explain BG 2.47" --model llama3.2:3b    # try another model
@@ -92,7 +91,7 @@ retrieved verses are shown as possible context rather than discarded. Self-harm 
 RAG with a bounded agent: the model can select a limited next action, while tool implementations,
 safety checks, and citation validation remain controlled by the application.
 
-## Evaluate models (Stage 1d)
+## Evaluate models
 ```bash
 ollama pull qwen2.5:7b
 python -m eval.run_eval --models llama3.2:3b qwen2.5:7b
@@ -119,7 +118,7 @@ ranks worse (measured). `GITA_EXPAND=0` switches it off, so you can A/B on your 
 GITA_EXPAND=0 python -m eval.run_eval --models qwen2.5:7b     # without
 python -m eval.run_eval --models qwen2.5:7b                    # with (default)
 ```
-Embedder experiment (Stage 1d): `bge-m3` (2 GB) did NOT fix the vocabulary gaps (c07 got worse), so the default stays
+Embedder experiment: `bge-m3` (2 GB) did NOT fix the vocabulary gaps (c07 got worse), so the default stays
 `bge-small-en`. If your index was built with bge-m3: `unset GITA_EMBEDDER && python -m src.ingest`.
 
 ## How retrieval works

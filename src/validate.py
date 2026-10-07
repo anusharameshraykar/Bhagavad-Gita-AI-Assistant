@@ -1,4 +1,4 @@
-"""Stage 1c: check that every verse the LLM cites was really retrieved.
+"""Check that every verse the LLM cites was really retrieved.
 
 LLMs sometimes cite verses that don't exist, or that exist but were never shown
 to them. This module catches both, in plain code (no LLM involved).

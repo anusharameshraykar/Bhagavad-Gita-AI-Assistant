@@ -1,4 +1,4 @@
-"""Stage 1e: Streamlit components shared by the chat page and the verse browser."""
+"""Streamlit components shared by the chat page and the verse browser."""
 from __future__ import annotations
 
 import json

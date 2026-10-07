@@ -1,4 +1,4 @@
-"""Stage 1b check: does the right verse show up in the top-K results?
+"""Check that the right verse appears in the top-K results.
 
 Run:  python -m eval.retrieval_check
 Add your own questions to QUESTIONS. `expect` = any ONE of these refs counts as a hit.

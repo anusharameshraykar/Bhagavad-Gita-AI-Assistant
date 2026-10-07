@@ -1,4 +1,4 @@
-"""Stage 1c: a deliberately simple pre-check that runs BEFORE the LLM.
+"""A deliberately simple pre-check that runs before the LLM.
 
 If a message looks like a self-harm crisis, we return a fixed, compassionate reply
 instead of asking a small local model to improvise. This is a safety net, not a

@@ -1,4 +1,4 @@
-"""Stage 1e: small pure helpers for the UI (no Streamlit import, so they are easy to test)."""
+"""Small pure helpers for the UI (no Streamlit import, so they are easy to test)."""
 from __future__ import annotations
 
 import re

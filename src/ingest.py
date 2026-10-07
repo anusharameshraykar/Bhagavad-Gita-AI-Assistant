@@ -1,4 +1,4 @@
-"""Stage 1b (part 1): embed every verse and store it in ChromaDB.
+"""Embed every verse and store it in ChromaDB.
 
 Run:  python -m src.ingest
 Re-run whenever you change GITA_EMBEDDER or SEARCH_FIELDS.

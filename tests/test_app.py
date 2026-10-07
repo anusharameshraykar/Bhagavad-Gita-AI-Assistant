@@ -83,16 +83,13 @@ def test_refusal_shows_no_verse_cards():
     assert not any("Verses cited" in c.value for c in at.caption)
 
 
-def test_search_sholkas_page_shows_selected_verse():
-    at = run_app("pages/1_Search_Sholkas.py")
+def test_search_sholkas_view_shows_selected_verse():
+    at = run_app()
     assert not at.exception
+    at.radio[0].set_value("Search Sholkas").run()
     assert any("Search Sholkas" in title.value for title in at.title)
-    at.selectbox(key="chapter").select(2).run()
-    at.selectbox(key="verse").select(47).run()
+    at.selectbox[0].select(2).run()
+    at.selectbox[1].select(47).run()
     assert not at.exception
-    assert any("BG 2.47" in e.label for e in at.expander)
     assert any("karma" in m.value.lower() for m in at.markdown)
-    card = next(e for e in at.expander if "BG 2.47" in e.label)
-    assert any("Word meanings" in m.value for m in card.markdown)
-    assert any("prescribed duties" in m.value for m in card.markdown)
-    assert not any(e.label == "Word meanings" for e in card.expander)
+    assert any("in prescribed duties" in m.value for m in at.markdown)

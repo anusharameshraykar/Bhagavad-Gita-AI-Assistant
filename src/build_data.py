@@ -1,4 +1,4 @@
-"""Stage 1a: download the raw Gita data and clean it into data/gita_verses.json.
+"""Download the raw Gita data and clean it into data/gita_verses.json.
 
 Run:  python -m src.build_data
 Each output record looks like:

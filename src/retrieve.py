@@ -1,4 +1,4 @@
-"""Stage 1b (part 2): retrieval.
+"""Retrieval.
 
     from src.retrieve import retrieve
     results = retrieve("what is sthitaprajna?")

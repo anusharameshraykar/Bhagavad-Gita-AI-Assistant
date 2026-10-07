@@ -39,9 +39,9 @@ QUERY_EXPANSION = os.getenv("GITA_EXPAND", "1") != "0"   # glossary expansion; G
 RRF_K = 60                # reciprocal-rank-fusion constant
 MAX_RELEVANT_VECTOR_DISTANCE = 0.45  # larger distances trigger the optional web fallback
 
-# ---- Generation (Stage 1c) ----------------------------------------------------
+# ---- Generation ---------------------------------------------------------------
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("GITA_MODEL", "qwen2.5:7b")   # chosen by the Stage 1d evaluation
+OLLAMA_MODEL = os.getenv("GITA_MODEL", "qwen2.5:7b")   # chosen by the evaluation run
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 LLM_TEMPERATURE = 0.2     # low = sticks to the sources
 LLM_TIMEOUT_S = 300       # first call can be slow while Ollama loads the model
