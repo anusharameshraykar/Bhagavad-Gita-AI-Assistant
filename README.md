@@ -43,14 +43,23 @@ GITA_MOCK_LLM=1 streamlit run app.py     # look around without Ollama (placehold
 ## Deploy publicly (Streamlit Community Cloud)
 
 The root `app.py` is the deployment entrypoint. The deployment uses Gemini for answers and the
-lightweight TF-IDF embedder to avoid downloading a neural model during cloud startup. A fresh
-deployment builds its local Chroma index from the checked-in `data/gita_verses.json` on first start.
-If the Chroma directory exists but the `gita` collection is missing, startup builds the collection
-instead of failing; existing collections are kept as-is. Startup logs show whether the collection
-was reused or rebuilt, plus embedder initialization, embedding-generation, and index-write timings.
+lightweight TF-IDF embedder. The prebuilt Chroma index and fitted TF-IDF model are packaged with
+the app so deployment startup reuses them instead of generating embeddings. The app fails clearly
+if the packaged collection is missing; it never starts a CPU-heavy index build during deployment.
+Startup logs show whether the collection was found and reused.
+
+To rebuild the packaged artifacts after changing the verse data or embedding setup, run locally:
+
+```bash
+GITA_EMBEDDER=tfidf python -m src.ingest
+```
+
+Commit both `data/chroma/` and `data/tfidf.pkl` together. They are a matched pair; do not change
+the embedder without rebuilding both. The runtime pins ChromaDB and scikit-learn to the versions
+used to produce/read these artifacts.
 
 1. Push this project to a GitHub repository you control. Do not commit `.env`, API keys,
-   `.streamlit/secrets.toml`, `.venv`, or `data/chroma`.
+   `.streamlit/secrets.toml`, or `.venv`.
 2. In Streamlit Community Cloud, create an app from that repository and set the main file to
    `app.py`. It installs the lean runtime dependencies from `requirements.txt`.
 3. Add this in the app's **Secrets** settings, replacing the placeholder with a key from Google AI

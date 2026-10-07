@@ -1,4 +1,4 @@
-"""Runtime setup helpers for deployments that don't ship a built vector index."""
+"""Runtime setup helpers for the packaged Chroma vector index."""
 from __future__ import annotations
 
 import logging
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def ensure_chroma_collection() -> bool:
-    """Build the configured collection if it is missing; return whether it was built."""
+    """Check that the packaged verse collection exists without building it at startup."""
     started = time.monotonic()
     logger.info(
         "Checking Chroma index at %s (collection=%s, embedder=%s).",
@@ -41,16 +41,10 @@ def ensure_chroma_collection() -> bool:
         )
         return False
 
-    logger.info(
-        "Chroma collection '%s' is missing; starting deployment-time index build from %s.",
-        config.COLLECTION,
-        config.VERSES_PATH,
+    message = (
+        f"Packaged Chroma collection '{config.COLLECTION}' is missing from {config.CHROMA_DIR}. "
+        "Build it before deployment with `GITA_EMBEDDER=tfidf python -m src.ingest`, "
+        "then include both data/chroma and data/tfidf.pkl."
     )
-    from src.ingest import build_collection
-
-    build_collection(client)
-    logger.info(
-        "Deployment-time index build completed (total startup build time %.2f seconds).",
-        time.monotonic() - started,
-    )
-    return True
+    logger.error("%s", message)
+    raise FileNotFoundError(message)

@@ -1,24 +1,25 @@
 import chromadb
+import pytest
 
 from src import config
 from src.deployment import ensure_chroma_collection
 
 
-def test_missing_chroma_collection_is_built(tmp_path, monkeypatch, caplog):
+def test_missing_chroma_collection_fails_without_building_at_startup(
+    tmp_path, monkeypatch, caplog
+):
     caplog.set_level("INFO", logger="src")
     chroma_dir = tmp_path / "chroma"
     chroma_dir.mkdir()
     monkeypatch.setattr(config, "CHROMA_DIR", chroma_dir)
     monkeypatch.setattr(config, "EMBEDDER", "tfidf")
 
-    assert ensure_chroma_collection() is True
-    client = chromadb.PersistentClient(path=str(chroma_dir))
-    assert client.get_collection(config.COLLECTION).count() > 0
-    assert "starting deployment-time index build" in caplog.text
-    assert "Embedding generation completed" in caplog.text
+    with pytest.raises(FileNotFoundError, match="Packaged Chroma collection"):
+        ensure_chroma_collection()
+    assert "Build it before deployment" in caplog.text
 
 
-def test_existing_chroma_collection_is_not_rebuilt(tmp_path, monkeypatch, caplog):
+def test_existing_chroma_collection_is_reused(tmp_path, monkeypatch, caplog):
     caplog.set_level("INFO", logger="src")
     chroma_dir = tmp_path / "chroma"
     monkeypatch.setattr(config, "CHROMA_DIR", chroma_dir)

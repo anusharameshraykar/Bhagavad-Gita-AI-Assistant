@@ -17,11 +17,13 @@ try:
 except StreamlitSecretNotFoundError:
     secrets = {}
 
-# Cloud deployments do not include the local Chroma index. Use TF-IDF there
-# unless the deployment explicitly selects another embedder.
-if secrets.get("GITA_EMBEDDER"):
-    os.environ.setdefault("GITA_EMBEDDER", secrets["GITA_EMBEDDER"])
-elif not os.getenv("GITA_EMBEDDER"):
+from src import config
+
+# Use the embedder recorded in the packaged Chroma index unless explicitly overridden.
+configured_embedder = os.getenv("GITA_EMBEDDER") or secrets.get("GITA_EMBEDDER")
+if configured_embedder:
+    config.EMBEDDER = configured_embedder
+else:
     chroma_dir = ROOT_DIR / "data" / "chroma"
     collection_exists = False
     if chroma_dir.exists():
@@ -36,13 +38,12 @@ elif not os.getenv("GITA_EMBEDDER"):
         if collection_exists:
             metadata = client.get_collection("gita").metadata or {}
             if metadata.get("embedder"):
-                os.environ["GITA_EMBEDDER"] = metadata["embedder"]
+                config.EMBEDDER = metadata["embedder"]
     if not collection_exists:
-        os.environ["GITA_EMBEDDER"] = "tfidf"
+        config.EMBEDDER = "tfidf"
 
 from src.generate import LLMUnavailable, call_ollama
 from src.generate import call_gemini
-from src import config
 from src.deployment import ensure_chroma_collection
 from src.logging_config import configure_logging
 from src.pipeline import answer_question
@@ -121,8 +122,9 @@ try:
     retriever_inst = load_retriever()
 except Exception as e:
     st.error(
-        "Failed to initialize the verse search index. The app will build the ChromaDB "
-        f"collection from the verse dataset when available. Details: {e}"
+        "Failed to initialize the packaged verse search index. Include the matching "
+        "`data/chroma` index and `data/tfidf.pkl` model in the deployment. "
+        f"Details: {e}"
     )
     st.stop()
 
