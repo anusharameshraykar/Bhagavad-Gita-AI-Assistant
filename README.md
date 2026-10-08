@@ -37,8 +37,8 @@ GITA_MOCK_LLM=1 streamlit run app.py     # look around without Ollama (placehold
   Exact verse lookups skip this check. Unclear classifications fail closed. Set `TAVILY_API_KEY`
   before starting Streamlit; only Gita-related questions with weak or empty retrieval are sent to Tavily.
 - Terminal logs label chat requests as `internal`, `external`, or `unknown`, with an opaque
-  per-session client ID and per-question request ID. Raw IP addresses and question text are not
-  logged; IDs identify a browser session, not a person's real identity.
+  per-session client ID and per-question request ID. The question text is logged when received;
+  raw IP addresses are not logged. IDs identify a browser session, not a person's real identity.
 
 ## Deploy publicly (Streamlit Community Cloud)
 

@@ -338,7 +338,9 @@ with right_col:
             with bind_request_context(
                 request_source, st.session_state.client_id, request_id
             ):
-                logging.getLogger("src.request").info("Question received.")
+                logging.getLogger("src.request").info(
+                    "Question received: %s", question_to_answer
+                )
 
         with st.container(
             height=560,
