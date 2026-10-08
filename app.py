@@ -1,10 +1,10 @@
 import functools
 import logging
 import os
-import streamlit as st
 import sys
 import uuid
 from pathlib import Path
+import streamlit as st
 from streamlit.errors import StreamlitSecretNotFoundError
 
 # Add project root to path so config and src imports work seamlessly
@@ -42,8 +42,8 @@ else:
     if not collection_exists:
         config.EMBEDDER = "tfidf"
 
-from src.generate import LLMUnavailable, call_gemini, call_groq, call_ollama
 from src.deployment import ensure_chroma_collection
+from src.generate import LLMUnavailable, call_gemini, call_groq, call_ollama
 from src.logging_config import configure_logging
 from src.pipeline import answer_question
 from src.request_context import bind_request_context, classify_client_source
@@ -55,30 +55,119 @@ configure_logging()
 st.set_page_config(
     page_title="Gita Chatbot",
     page_icon="🕉️",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="collapsed",
 )
 
 # Custom Styling
-st.markdown("""
+st.markdown(
+    """
     <style>
-        .stChatMessage { border-radius: 8px; }
-        .sanskrit { font-family: 'Sanskrit', serif; font-size: 1.1em; color: #8e44ad; }
+        /* 1. Hide Streamlit native header bar & footer */
+        header[data-testid="stHeader"], footer {
+            display: none !important;
+        }
+
+        .block-container {
+            padding-top: 1rem !important;
+            padding-bottom: 1rem !important;
+        }
+
+        /* 2. Left-side Krishna image */
+        div[data-testid="stImage"] img {
+            width: 100%;
+            max-height: 85vh;
+            object-fit: contain;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            opacity: 0.88;
+        }
+
+        /* 3. Legible chat messages with slight translucent dark backdrop */
+        .stChatMessage {
+            border-radius: 10px;
+            background-color: rgba(15, 23, 42, 0.75) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sanskrit {
+            font-family: 'Sanskrit', serif;
+            font-size: 1.25em;
+            color: #f1c40f;
+        }
+
+        .om-mark {
+            color: #a64b1a;
+        }
+
+        /* 4. Navigation buttons use the dark saffron palette. */
+        div[data-testid="stButton"] > button {
+            width: 100% !important;
+            height: 60px !important;
+            font-size: 1.35rem !important;
+            font-weight: 900 !important;
+            letter-spacing: 0.5px !important;
+            border-radius: 12px !important;
+            border: 2px solid #70401f !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+        }
+
+        div[data-testid="stButton"] > button[data-testid="stBaseButton-primary"] {
+            background-color: #33251b !important;
+            color: #ffffff !important;
+            border-color: #a85d27 !important;
+        }
+
+        div[data-testid="stButton"] > button:hover {
+            border-color: #c27636 !important;
+        }
+
+        div[data-testid="stPopover"] > button {
+            min-height: 2rem !important;
+            padding: 0.3rem 0.65rem !important;
+            font-size: 0.9rem !important;
+        }
+
+        /* Compact spacing */
+        hr {
+            margin-top: 8px !important;
+            margin-bottom: 12px !important;
+        }
+
+        .stCaption {
+            margin-bottom: 4px !important;
+        }
+
+        div[data-testid="stVerticalBlock"] > div {
+            gap: 0.5rem !important;
+        }
     </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 
 def render_verse_card(verse: dict):
-    """Render structured verse card matching your dataset dictionary format."""
-    st.markdown(f"**Chapter {verse.get('chapter')}, Verse {verse.get('verse')}** (`{verse.get('ref')}`)")
-    st.markdown(f"<div class='sanskrit'>{verse.get('sanskrit', '')}</div>", unsafe_allow_html=True)
+    """Render structured verse card matching dataset dictionary format."""
+    st.markdown(
+        f"**Chapter {verse.get('chapter')}, Verse {verse.get('verse')}** (`{verse.get('ref')}`)"
+    )
+    st.markdown(
+        f"<div class='sanskrit'>{verse.get('sanskrit', '')}</div>",
+        unsafe_allow_html=True,
+    )
     st.caption(f"*Transliteration:* {verse.get('transliteration', '')}")
     st.write(f"**Translation:** {verse.get('translation', '')}")
     word_meanings = verse.get("word_meanings", "")
     if word_meanings:
         with st.expander("Word meanings"):
-            st.markdown("\n".join(
-                f"- {meaning.strip()}" for meaning in word_meanings.split(";") if meaning.strip()
-            ))
+            st.markdown(
+                "\n".join(
+                    f"- {meaning.strip()}"
+                    for meaning in word_meanings.split(";")
+                    if meaning.strip()
+                )
+            )
 
 
 def render_web_sources(sources: list[dict[str, str]]) -> None:
@@ -88,26 +177,6 @@ def render_web_sources(sources: list[dict[str, str]]) -> None:
         for index, source in enumerate(sources, start=1):
             st.link_button(f"[{index}] {source['title']}", source["url"])
 
-
-# --- Sidebar Navigation ---
-st.sidebar.title("🕉️ Gita AI Assistant")
-app_mode = st.sidebar.radio("Select View", ["Gita Chatbot", "Search Sholkas"])
-provider = "Groq"
-model = config.GROQ_MODEL
-if st.sidebar.toggle("Show model options", value=False):
-    provider = st.sidebar.selectbox("LLM provider", ["Groq", "Gemini", "Qwen"])
-    if provider == "Gemini":
-        model = st.sidebar.text_input("Gemini model", value=config.GEMINI_MODEL)
-    elif provider == "Groq":
-        model = st.sidebar.text_input("Groq model", value=config.GROQ_MODEL)
-    else:
-        model = st.sidebar.text_input(
-            "Qwen model",
-            value=os.getenv("GITA_MODEL", "qwen2.5:7b"),
-            help="Must already be pulled: qwen pull <name>",
-        )
-gemini_api_key = secrets.get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", ""))
-groq_api_key = secrets.get("GROQ_API_KEY", os.getenv("GROQ_API_KEY", ""))
 
 # Load cached retriever instance
 @st.cache_resource(show_spinner="Preparing the verse search index...")
@@ -127,130 +196,199 @@ except Exception as e:
     )
     st.stop()
 
-# ==========================================
-# VIEW 1: AI CHATBOT (RAG + Guardrails)
-# ==========================================
-if app_mode == "Gita Chatbot":
-    st.title("Gita Chatbot")
-    st.caption("Ask questions about life, duty, yoga, and philosophy grounded strictly in Gita verses.")
+# Page heading and view navigation sit above the image and page content.
+st.markdown(
+    '## <span class="om-mark">ॐ</span> Bhagavad Gita AI',
+    unsafe_allow_html=True,
+)
+st.space("small")
 
-    # Initialize Chat History
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-    if "client_id" not in st.session_state:
-        st.session_state.client_id = uuid.uuid4().hex[:12]
+if "active_view" not in st.session_state:
+    st.session_state.active_view = "Gita Chatbot"
 
-    # Display past chat history
-    for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
-            if "sources" in msg and msg["sources"]:
-                with st.expander("📖 Cited Verses", expanded=False):
-                    for verse in msg["sources"]:
-                        render_verse_card(verse)
-            render_web_sources(msg.get("web_sources", []))
+# =========================================================
+# MAIN LAYOUT: LEFT SIDE IMAGE | RIGHT SIDE PAGE CONTENT
+# =========================================================
+left_col, right_col = st.columns([1, 4.5], gap="small")
 
-    # Chat Input Box
-    if user_query := st.chat_input("e.g., What does Sri Krishna say about controlling the mind?"):
-        request_id = uuid.uuid4().hex[:12]
-        request_source = classify_client_source(
-            st.context.ip_address,
-            st.context.headers,
-        )
-        with bind_request_context(request_source, st.session_state.client_id, request_id):
-            logging.getLogger("src.request").info("Question received.")
+with right_col:
+    col1, col2 = st.columns([1, 1], gap="small")
 
-        # 1. Render User Message
-        st.session_state.messages.append({"role": "user", "content": user_query})
-        with st.chat_message("user"):
-            st.markdown(user_query)
-
-        # 2. RAG Process
-        with st.chat_message("assistant"):
-            with st.spinner("Retrieving verses & generating answer..."):
-                try:
-                    llm = (
-                        functools.partial(
-                            call_gemini,
-                            api_key=gemini_api_key,
-                            model=model,
-                        )
-                        if provider == "Gemini"
-                        else functools.partial(
-                            call_groq,
-                            api_key=groq_api_key,
-                            model=model,
-                        )
-                        if provider == "Groq"
-                        else functools.partial(call_ollama, model=model)
-                    )
-                    with bind_request_context(
-                        request_source,
-                        st.session_state.client_id,
-                        request_id,
-                    ):
-                        result = answer_question(user_query, llm=llm)
-                except LLMUnavailable as err:
-                    st.error(f"LLM Error: {err}")
-                    st.stop()
-
-            # Render output
-            st.markdown(result.text)
-            if result.warning:
-                st.warning(result.warning)
-
-            render_web_sources(result.web_sources)
-
-            if result.cited_verses:
-                with st.expander("📖 Cited Verses (Sources)", expanded=True):
-                    for v in result.cited_verses:
-                        render_verse_card(v)
-
-        # 3. Append Assistant Message
-        st.session_state.messages.append({
-            "role": "assistant",
-            "content": result.text,
-            "sources": result.cited_verses,
-            "web_sources": result.web_sources,
-        })
-
-# ==========================================
-# VIEW 2: VERSE BROWSER
-# ==========================================
-elif app_mode == "Search Sholkas":
-    st.title("📖 Search Sholkas")
-    st.write("Select any Chapter and Verse number to read directly.")
-
-    all_verses = retriever_inst.verses  # Accesses internal parsed JSON list
-
-    col1, col2 = st.columns(2)
     with col1:
-        chapter_num = st.selectbox("Select Chapter", options=list(range(1, 19)))
-
-    # Filter verses matching selected chapter
-    chapter_verses = [v for v in all_verses if v.get("chapter") == chapter_num]
-    verse_numbers = [v.get("verse") for v in chapter_verses]
+        btn_type_1 = "primary" if st.session_state.active_view == "Gita Chatbot" else "secondary"
+        if st.button("💬 Gita Chatbot", type=btn_type_1, width="stretch"):
+            st.session_state.active_view = "Gita Chatbot"
+            st.rerun()
 
     with col2:
-        selected_verse_num = st.selectbox("Select Verse", options=verse_numbers)
+        btn_type_2 = "primary" if st.session_state.active_view == "Search Shlokas" else "secondary"
+        if st.button("📖 Search Shlokas", type=btn_type_2, width="stretch"):
+            st.session_state.active_view = "Search Shlokas"
+            st.rerun()
 
-    # Retrieve selected verse object
-    matching_verse = next(
-        (v for v in chapter_verses if v.get("verse") == selected_verse_num), None
+    st.divider()
+
+# --- LEFT COLUMN: VISHWAROOPA IMAGE ---
+with left_col:
+    st.image(
+        str(ROOT_DIR / "assets" / "krishna.png"),
+        width="stretch",
+        alt="Krishna standing beneath a radiant celestial sky",
     )
+    st.space("small")
+    provider = "Groq"
+    model = config.GROQ_MODEL
+    with st.popover("⚙️ Models", width="content"):
+        provider = st.selectbox("LLM Provider", ["Groq", "Gemini", "Qwen"])
+        if provider == "Gemini":
+            model = st.text_input("Gemini Model", value=config.GEMINI_MODEL)
+        elif provider == "Groq":
+            model = st.text_input("Groq Model", value=config.GROQ_MODEL)
+        else:
+            model = st.text_input(
+                "Qwen Model",
+                value=os.getenv("GITA_MODEL", "qwen2.5:7b"),
+                help="Must already be pulled: qwen pull <name>",
+            )
 
-    if matching_verse:
-        st.divider()
-        st.subheader(f"Chapter {chapter_num}, Verse {selected_verse_num} (`{matching_verse.get('ref')}`)")
-        st.markdown(f"### Sanskrit\n`{matching_verse.get('sanskrit')}`")
-        st.markdown(f"### Transliteration\n*{matching_verse.get('transliteration')}*")
-        st.markdown(f"### Translation\n{matching_verse.get('translation')}")
-        word_meanings = matching_verse.get("word_meanings", "")
-        if word_meanings:
-            st.markdown("### Word meanings")
-            st.markdown("\n".join(
-                f"- {meaning.strip()}" for meaning in word_meanings.split(";")
-                if meaning.strip()
-            ))
-    else:
-        st.warning("Verse not found in dataset.")
+# --- RIGHT COLUMN: APP CONTENT & CHATBOT ---
+with right_col:
+    gemini_api_key = secrets.get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", ""))
+    groq_api_key = secrets.get("GROQ_API_KEY", os.getenv("GROQ_API_KEY", ""))
+
+    # ==========================================
+    # VIEW 1: AI CHATBOT (RAG + Guardrails)
+    # ==========================================
+    if st.session_state.active_view == "Gita Chatbot":
+        st.caption(
+            "Ask questions about life, duty, yoga, and philosophy grounded strictly in Gita verses."
+        )
+
+        # Initialize Chat History
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
+        if "client_id" not in st.session_state:
+            st.session_state.client_id = uuid.uuid4().hex[:12]
+
+        # Keep the transcript in a stable scroll area so the composer stays put.
+        with st.container(height=560, border=False):
+            for msg in st.session_state.messages:
+                with st.chat_message(msg["role"]):
+                    st.markdown(msg["content"])
+                    if "sources" in msg and msg["sources"]:
+                        with st.expander("📜 Cited Verses", expanded=False):
+                            for verse in msg["sources"]:
+                                render_verse_card(verse)
+                    if msg.get("warning"):
+                        st.warning(msg["warning"])
+                    render_web_sources(msg.get("web_sources", []))
+            response_slot = st.empty()
+
+        if user_query := st.chat_input(
+            "e.g., What does Sri Krishna say about controlling the mind?"
+        ):
+            request_id = uuid.uuid4().hex[:12]
+            request_source = classify_client_source(
+                st.context.ip_address,
+                st.context.headers,
+            )
+            with bind_request_context(
+                request_source, st.session_state.client_id, request_id
+            ):
+                logging.getLogger("src.request").info("Question received.")
+
+            # 1. Render User Message
+            st.session_state.messages.append({"role": "user", "content": user_query})
+
+            # 2. RAG Process
+            with response_slot.container():
+                with st.chat_message("user"):
+                    st.markdown(user_query)
+                with st.chat_message("assistant"):
+                    with st.spinner("Retrieving verses & generating answer..."):
+                        try:
+                            llm = (
+                                functools.partial(
+                                    call_gemini,
+                                    api_key=gemini_api_key,
+                                    model=model,
+                                )
+                                if provider == "Gemini"
+                                else functools.partial(
+                                    call_groq,
+                                    api_key=groq_api_key,
+                                    model=model,
+                                )
+                                if provider == "Groq"
+                                else functools.partial(call_ollama, model=model)
+                            )
+                            with bind_request_context(
+                                request_source,
+                                st.session_state.client_id,
+                                request_id,
+                            ):
+                                result = answer_question(user_query, llm=llm)
+                        except LLMUnavailable as err:
+                            st.error(f"LLM Error: {err}")
+                            st.stop()
+
+            # 3. Append Assistant Message and redraw the transcript in its stable area.
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "content": result.text,
+                    "sources": result.cited_verses,
+                    "web_sources": result.web_sources,
+                    "warning": result.warning,
+                }
+            )
+            st.rerun()
+
+    # ==========================================
+    # VIEW 2: VERSE BROWSER
+    # ==========================================
+    elif st.session_state.active_view == "Search Shlokas":
+        st.subheader("📖 Search Shlokas")
+        st.write("Select any Chapter and Verse number to read directly.")
+
+        all_verses = retriever_inst.verses
+
+        c1, c2 = st.columns(2)
+        with c1:
+            chapter_num = st.selectbox("Select Chapter", options=list(range(1, 19)))
+
+        # Filter verses matching selected chapter
+        chapter_verses = [v for v in all_verses if v.get("chapter") == chapter_num]
+        verse_numbers = [v.get("verse") for v in chapter_verses]
+
+        with c2:
+            selected_verse_num = st.selectbox("Select Verse", options=verse_numbers)
+
+        # Retrieve selected verse object
+        matching_verse = next(
+            (v for v in chapter_verses if v.get("verse") == selected_verse_num),
+            None,
+        )
+
+        if matching_verse:
+            st.divider()
+            st.subheader(
+                f"Chapter {chapter_num}, Verse {selected_verse_num} (`{matching_verse.get('ref')}`)"
+            )
+            st.markdown(f"### Sanskrit\n`{matching_verse.get('sanskrit')}`")
+            st.markdown(
+                f"### Transliteration\n*{matching_verse.get('transliteration')}*"
+            )
+            st.markdown(f"### Translation\n{matching_verse.get('translation')}")
+            word_meanings = matching_verse.get("word_meanings", "")
+            if word_meanings:
+                st.markdown("### Word meanings")
+                st.markdown(
+                    "\n".join(
+                        f"- {meaning.strip()}"
+                        for meaning in word_meanings.split(";")
+                        if meaning.strip()
+                    )
+                )
+        else:
+            st.warning("Verse not found in dataset.")
