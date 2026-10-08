@@ -26,7 +26,20 @@ def test_chat_page_loads_with_examples():
     at = run_app()
     assert not at.exception
     assert any("Ask the Bhagavad Gita" in t.value for t in at.title)
-    assert len(at.button) >= 4                      # example questions (+ Clear chat)
+    assert len(at.button) >= 4
+
+
+def test_clear_chat_is_only_shown_in_chatbot_view():
+    at = run_app()
+    assert any(button.label == "Clear chat" for button in at.button)
+
+    at.button(key="search_nav").click().run()
+    assert not at.exception
+    assert not any(button.label == "Clear chat" for button in at.button)
+
+    at.button(key="chatbot_nav").click().run()
+    assert not at.exception
+    assert any(button.label == "Clear chat" for button in at.button)
 
 
 def test_question_produces_answer_and_verse_cards():

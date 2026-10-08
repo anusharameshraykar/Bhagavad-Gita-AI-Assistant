@@ -101,7 +101,8 @@ st.markdown(
         }
 
         /* 4. Navigation buttons use the dark saffron palette. */
-        div[data-testid="stButton"] > button {
+        .st-key-chatbot_nav button,
+        .st-key-search_nav button {
             width: 100% !important;
             height: 60px !important;
             font-size: 1.35rem !important;
@@ -112,13 +113,15 @@ st.markdown(
             box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
         }
 
-        div[data-testid="stButton"] > button[data-testid="stBaseButton-primary"] {
+        .st-key-chatbot_nav button[data-testid="stBaseButton-primary"],
+        .st-key-search_nav button[data-testid="stBaseButton-primary"] {
             background-color: #33251b !important;
             color: #ffffff !important;
             border-color: #a85d27 !important;
         }
 
-        div[data-testid="stButton"] > button:hover {
+        .st-key-chatbot_nav button:hover,
+        .st-key-search_nav button:hover {
             border-color: #c27636 !important;
         }
 
@@ -216,13 +219,23 @@ with right_col:
 
     with col1:
         btn_type_1 = "primary" if st.session_state.active_view == "Gita Chatbot" else "secondary"
-        if st.button("💬 Gita Chatbot", type=btn_type_1, width="stretch"):
+        if st.button(
+            "💬 Gita Chatbot",
+            type=btn_type_1,
+            width="stretch",
+            key="chatbot_nav",
+        ):
             st.session_state.active_view = "Gita Chatbot"
             st.rerun()
 
     with col2:
         btn_type_2 = "primary" if st.session_state.active_view == "Search Shlokas" else "secondary"
-        if st.button("📖 Search Shlokas", type=btn_type_2, width="stretch"):
+        if st.button(
+            "📖 Search Shlokas",
+            type=btn_type_2,
+            width="stretch",
+            key="search_nav",
+        ):
             st.session_state.active_view = "Search Shlokas"
             st.rerun()
 
@@ -238,18 +251,27 @@ with left_col:
     st.space("small")
     provider = "Groq"
     model = config.GROQ_MODEL
-    with st.popover("⚙️ Models", width="content"):
-        provider = st.selectbox("LLM Provider", ["Groq", "Gemini", "Qwen"])
-        if provider == "Gemini":
-            model = st.text_input("Gemini Model", value=config.GEMINI_MODEL)
-        elif provider == "Groq":
-            model = st.text_input("Groq Model", value=config.GROQ_MODEL)
-        else:
-            model = st.text_input(
-                "Qwen Model",
-                value=os.getenv("GITA_MODEL", "qwen2.5:7b"),
-                help="Must already be pulled: qwen pull <name>",
-            )
+    with st.container(horizontal=True, gap="small", vertical_alignment="center"):
+        with st.popover("⚙️ Models", width="content"):
+            provider = st.selectbox("LLM Provider", ["Groq", "Gemini", "Qwen"])
+            if provider == "Gemini":
+                model = st.text_input("Gemini Model", value=config.GEMINI_MODEL)
+            elif provider == "Groq":
+                model = st.text_input("Groq Model", value=config.GROQ_MODEL)
+            else:
+                model = st.text_input(
+                    "Qwen Model",
+                    value=os.getenv("GITA_MODEL", "qwen2.5:7b"),
+                    help="Must already be pulled: qwen pull <name>",
+                )
+        if st.session_state.active_view == "Gita Chatbot" and st.button(
+            "Clear chat",
+            icon=":material/delete_outline:",
+            type="secondary",
+            width="content",
+        ):
+            st.session_state.messages = []
+            st.rerun()
 
 # --- RIGHT COLUMN: APP CONTENT & CHATBOT ---
 with right_col:
@@ -270,7 +292,23 @@ with right_col:
         if "client_id" not in st.session_state:
             st.session_state.client_id = uuid.uuid4().hex[:12]
 
-        # Keep the transcript in a stable scroll area so the composer stays put.
+        user_query = st.chat_input(
+            "e.g., What does Sri Krishna say about controlling the mind?"
+        )
+        request_id = None
+        request_source = None
+        if user_query:
+            request_id = uuid.uuid4().hex[:12]
+            request_source = classify_client_source(
+                st.context.ip_address,
+                st.context.headers,
+            )
+            with bind_request_context(
+                request_source, st.session_state.client_id, request_id
+            ):
+                logging.getLogger("src.request").info("Question received.")
+            st.session_state.messages.append({"role": "user", "content": user_query})
+
         with st.container(height=560, border=False):
             for msg in st.session_state.messages:
                 with st.chat_message(msg["role"]):
@@ -284,26 +322,9 @@ with right_col:
                     render_web_sources(msg.get("web_sources", []))
             response_slot = st.empty()
 
-        if user_query := st.chat_input(
-            "e.g., What does Sri Krishna say about controlling the mind?"
-        ):
-            request_id = uuid.uuid4().hex[:12]
-            request_source = classify_client_source(
-                st.context.ip_address,
-                st.context.headers,
-            )
-            with bind_request_context(
-                request_source, st.session_state.client_id, request_id
-            ):
-                logging.getLogger("src.request").info("Question received.")
-
-            # 1. Render User Message
-            st.session_state.messages.append({"role": "user", "content": user_query})
-
-            # 2. RAG Process
+        if user_query:
+            assert request_id is not None and request_source is not None
             with response_slot.container():
-                with st.chat_message("user"):
-                    st.markdown(user_query)
                 with st.chat_message("assistant"):
                     with st.spinner("Retrieving verses & generating answer..."):
                         try:
@@ -332,7 +353,6 @@ with right_col:
                             st.error(f"LLM Error: {err}")
                             st.stop()
 
-            # 3. Append Assistant Message and redraw the transcript in its stable area.
             st.session_state.messages.append(
                 {
                     "role": "assistant",
