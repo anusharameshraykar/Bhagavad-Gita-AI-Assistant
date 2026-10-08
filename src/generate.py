@@ -204,3 +204,46 @@ def call_groq(
         raise LLMUnavailable(f"Groq returned HTTP {exc.status_code}: {detail}") from exc
     except (APIConnectionError, TimeoutError) as exc:
         raise LLMUnavailable(f"Could not reach the Groq API: {exc}") from exc
+
+
+def call_groq_then_gemini(
+    messages: list[dict],
+    groq_api_key: str,
+    gemini_api_key: str,
+    groq_model: str | None = None,
+    gemini_model: str | None = None,
+) -> str:
+    """Use Groq first, falling back to Gemini if Groq errors or returns no text."""
+    groq_model = groq_model or config.GROQ_MODEL
+    gemini_model = gemini_model or config.GEMINI_MODEL
+    groq_error: Exception
+    try:
+        text = call_groq(messages, api_key=groq_api_key, model=groq_model)
+        if not isinstance(text, str) or not text.strip():
+            raise LLMUnavailable("Groq returned no text in its response.")
+        return text.strip()
+    except Exception as exc:
+        groq_error = exc
+        logger.warning(
+            "Groq model %s failed (%s); falling back to Gemini model %s.",
+            groq_model,
+            groq_error,
+            gemini_model,
+        )
+
+    try:
+        return call_gemini(
+            messages,
+            api_key=gemini_api_key,
+            model=gemini_model,
+        )
+    except Exception as gemini_error:
+        logger.exception(
+            "Gemini fallback model %s failed after Groq model %s failed.",
+            gemini_model,
+            groq_model,
+        )
+        raise LLMUnavailable(
+            f"Groq model '{groq_model}' failed ({groq_error}); "
+            f"Gemini fallback model '{gemini_model}' failed ({gemini_error})."
+        ) from gemini_error

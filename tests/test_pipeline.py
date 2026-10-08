@@ -150,7 +150,7 @@ def test_persistent_refusal_returns_matching_retrieved_verses():
 
 
 def test_refusal_with_spray_of_citations_strips_them_and_shows_no_cards():
-    # real qwen behaviour from the evaluation: refuse, then list unrelated retrieved verses
+    # real llama behaviour from the evaluation: refuse, then list unrelated retrieved verses
     llm = ScriptedLLM("I couldn't find this in the verses retrieved. They cover duty. [BG 2.47] [BG 3.19]",
                       "I couldn't find this in the verses retrieved. They cover duty.")
     res = run(llm, "Write a Python function to sort a list.")

@@ -77,7 +77,8 @@ used to produce/read these artifacts.
 
    Groq provides free-tier usage subject to account/model rate limits. The app defaults to Groq
    when `GROQ_API_KEY` is present, using `openai/gpt-oss-20b`; you can change the model in the
-   sidebar or set `GROQ_MODEL`.
+   sidebar or set `GROQ_MODEL`. When Groq is selected, a request error or empty response
+   automatically falls back to Gemini; configure both API keys to enable this fallback.
 
    Optional web-search fallback (Tavily):
 
@@ -86,7 +87,8 @@ used to produce/read these artifacts.
    ```
 
    The app defaults to Groq when `GROQ_API_KEY` is present; otherwise it defaults to Gemini when
-   `GEMINI_API_KEY` is present, then to Ollama. Without Tavily, a selected web-search action
+   `GEMINI_API_KEY` is present, then to Ollama. Logs identify each provider and model used,
+   including when a Groq failure triggers Gemini fallback. Without Tavily, a selected web-search action
    returns a clear unavailable message; verse answering continues to work.
    Transient Gemini HTTP 503 responses are attempted up to three times with exponential backoff;
    persistent errors are shown so you can try again later or switch to Ollama.
@@ -99,7 +101,7 @@ use only `requirements.txt`.
 
 ## Ask questions — needs Ollama running
 ```bash
-ollama pull qwen2.5:7b                       # default model
+ollama pull llama3.2:3b                       # default model
 python -m src.ask "What is karma yoga?"
 python -m src.ask "How to control anger?" --debug          # shows retrieved verses + validation
 python -m src.ask "Explain BG 2.47" --model llama3.2:3b    # try another model
@@ -118,8 +120,8 @@ safety checks, and citation validation remain controlled by the application.
 
 ## Evaluate models
 ```bash
-ollama pull qwen2.5:7b
-python -m eval.run_eval --models llama3.2:3b qwen2.5:7b
+ollama pull llama3.2:3b
+python -m eval.run_eval --models llama3.2:3b
 python -m eval.run_eval --models llama3.2:3b --limit 5     # quick smoke test
 python -m eval.run_eval --mock                             # harness check, no Ollama
 ```
@@ -140,8 +142,8 @@ Bridges Sanskrit terms and vocabulary gaps ("gunas" -> "qualities of nature, pur
 flagged `keyword=True`, because for terms like yajna/atman the Sanskrit word already matches and extra words made
 ranks worse (measured). `GITA_EXPAND=0` switches it off, so you can A/B on your real embedder:
 ```bash
-GITA_EXPAND=0 python -m eval.run_eval --models qwen2.5:7b     # without
-python -m eval.run_eval --models qwen2.5:7b                    # with (default)
+GITA_EXPAND=0 python -m eval.run_eval --models llama3.2:3b     # without
+python -m eval.run_eval --models llama3.2:3b                    # with (default)
 ```
 Embedder experiment: `bge-m3` (2 GB) did NOT fix the vocabulary gaps (c07 got worse), so the default stays
 `bge-small-en`. If your index was built with bge-m3: `unset GITA_EMBEDDER && python -m src.ingest`.

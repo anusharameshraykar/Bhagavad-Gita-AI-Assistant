@@ -43,7 +43,7 @@ else:
         config.EMBEDDER = "tfidf"
 
 from src.deployment import ensure_chroma_collection
-from src.generate import LLMUnavailable, call_gemini, call_groq, call_ollama
+from src.generate import LLMUnavailable, call_gemini, call_groq_then_gemini, call_ollama
 from src.logging_config import configure_logging
 from src.pipeline import answer_question
 from src.request_context import bind_request_context, classify_client_source
@@ -258,7 +258,7 @@ with left_col:
     model = config.GROQ_MODEL
     with st.container(horizontal=True, gap="small", vertical_alignment="center"):
         with st.popover("⚙️ Models", width="content"):
-            provider = st.selectbox("LLM Provider", ["Groq", "Gemini", "Qwen"])
+            provider = st.selectbox("LLM Provider", ["Groq", "Gemini", "Llama"])
             if provider == "Gemini":
                 model = st.text_input(
                     "Gemini Model",
@@ -273,9 +273,9 @@ with left_col:
                 )
             else:
                 model = st.text_input(
-                    "Qwen Model",
-                    value=os.getenv("GITA_MODEL", "qwen2.5:7b"),
-                    help="Must already be pulled: qwen pull <name>",
+                    "Llama Model",
+                    value=os.getenv("GITA_MODEL", "llama3.2:3b"),
+                    help="Must already be pulled: ollama pull <name>",
                     disabled=True,
                 )
         if st.session_state.active_view == "Gita Chatbot" and st.button(
@@ -372,9 +372,10 @@ with right_col:
                                 )
                                 if provider == "Gemini"
                                 else functools.partial(
-                                    call_groq,
-                                    api_key=groq_api_key,
-                                    model=model,
+                                    call_groq_then_gemini,
+                                    groq_api_key=groq_api_key,
+                                    gemini_api_key=gemini_api_key,
+                                    groq_model=model,
                                 )
                                 if provider == "Groq"
                                 else functools.partial(call_ollama, model=model)

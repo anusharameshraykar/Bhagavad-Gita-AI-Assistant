@@ -41,8 +41,8 @@ MAX_RELEVANT_VECTOR_DISTANCE = 0.45  # larger distances trigger the optional web
 
 # ---- Generation ---------------------------------------------------------------
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("GITA_MODEL", "qwen2.5:7b")   # chosen by the evaluation run
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+OLLAMA_MODEL = os.getenv("GITA_MODEL", "llama3.2:3b")   # chosen by the evaluation run
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
 LLM_TEMPERATURE = 0.2     # low = sticks to the sources
 LLM_TIMEOUT_S = 300       # first call can be slow while Ollama loads the model

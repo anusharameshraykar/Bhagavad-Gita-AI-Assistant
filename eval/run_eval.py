@@ -1,6 +1,6 @@
 """Score one or more models on the question set.
 
-    python -m eval.run_eval --models llama3.2:3b qwen2.5:7b
+    python -m eval.run_eval --models llama3.2:3b
     python -m eval.run_eval --models llama3.2:3b --only adversarial
     python -m eval.run_eval --models llama3.2:3b --limit 5        # quick smoke test
     python -m eval.run_eval --mock                                 # no Ollama needed (tests the harness)

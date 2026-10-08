@@ -8,7 +8,12 @@ import httpx
 
 from src import config
 from src import generate
-from src.generate import LLMUnavailable, call_gemini, call_groq
+from src.generate import (
+    LLMUnavailable,
+    call_gemini,
+    call_groq,
+    call_groq_then_gemini,
+)
 
 
 class Response:
@@ -214,3 +219,75 @@ def test_call_groq_explains_cloudflare_1010(monkeypatch):
     monkeypatch.setattr(generate, "Groq", FakeGroq)
     with pytest.raises(LLMUnavailable, match="Cloudflare error 1010"):
         call_groq([], api_key="test-api-key")
+
+
+def test_call_groq_then_gemini_returns_groq_answer_without_fallback(monkeypatch):
+    calls = []
+
+    def fake_groq(messages, api_key, model):
+        calls.append(("groq", model))
+        return "Groq answer."
+
+    def unexpected_gemini(*args, **kwargs):
+        pytest.fail("Gemini should not be called when Groq succeeds.")
+
+    monkeypatch.setattr(generate, "call_groq", fake_groq)
+    monkeypatch.setattr(generate, "call_gemini", unexpected_gemini)
+
+    answer = call_groq_then_gemini(
+        [], "groq-key", "gemini-key", "groq-test", "gemini-test"
+    )
+
+    assert answer == "Groq answer."
+    assert calls == [("groq", "groq-test")]
+
+
+@pytest.mark.parametrize(
+    "groq_result",
+    [RuntimeError("Groq is unavailable"), "  "],
+)
+def test_call_groq_then_gemini_falls_back_on_error_or_empty_result(
+    monkeypatch, caplog, groq_result
+):
+    calls = []
+
+    def fake_groq(messages, api_key, model):
+        calls.append(("groq", model))
+        if isinstance(groq_result, Exception):
+            raise groq_result
+        return groq_result
+
+    def fake_gemini(messages, api_key, model):
+        calls.append(("gemini", model))
+        return "Gemini answer."
+
+    monkeypatch.setattr(generate, "call_groq", fake_groq)
+    monkeypatch.setattr(generate, "call_gemini", fake_gemini)
+
+    answer = call_groq_then_gemini(
+        [], "groq-key", "gemini-key", "groq-test", "gemini-test"
+    )
+
+    assert answer == "Gemini answer."
+    assert calls == [("groq", "groq-test"), ("gemini", "gemini-test")]
+    assert "Groq model groq-test failed" in caplog.text
+    assert "Gemini model gemini-test" in caplog.text
+
+
+def test_call_groq_then_gemini_reports_both_failures(monkeypatch):
+    def failing_groq(*args, **kwargs):
+        raise LLMUnavailable("Groq is unavailable.")
+
+    def failing_gemini(*args, **kwargs):
+        raise LLMUnavailable("Gemini is unavailable.")
+
+    monkeypatch.setattr(generate, "call_groq", failing_groq)
+    monkeypatch.setattr(generate, "call_gemini", failing_gemini)
+
+    with pytest.raises(
+        LLMUnavailable,
+        match="Groq model 'groq-test'.*Gemini fallback model 'gemini-test'",
+    ):
+        call_groq_then_gemini(
+            [], "groq-key", "gemini-key", "groq-test", "gemini-test"
+        )
