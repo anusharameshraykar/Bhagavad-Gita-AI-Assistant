@@ -40,6 +40,9 @@ GLOSSARY: list = [
     (r"\bkarma[- ]?yoga\b", "right action selfless action without attachment to results", True),
     (r"\bmoksha\b|\bmoksa\b|\bmukti\b|\bnirvana\b",
      "liberation freedom release from bondage supreme peace", True),
+    (r"\bpaths?\b.*\b(?:moksha|moksa|mukti|liberation)\b|"
+     r"\b(?:moksha|moksa|mukti|liberation)\b.*\bpaths?\b",
+     "twofold path wisdom knowledge action yoga", True),
     (r"\bmaya\b", "illusion delusion divine nature", True),
     # vector-only: the Sanskrit term itself already matches in keyword search
     (r"\bbhakti\b", "devotion love worship", False),

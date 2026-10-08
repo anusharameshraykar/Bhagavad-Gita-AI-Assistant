@@ -183,6 +183,7 @@ def test_prompt_demands_short_uncited_refusals_and_professional_referral():
     from src.generate import SYSTEM_PROMPT
     assert "begin exactly with" in SYSTEM_PROMPT and "Do not cite any verse" in SYSTEM_PROMPT
     assert "qualified professional" in SYSTEM_PROMPT
+    assert "For \"how many\" questions" in SYSTEM_PROMPT
 
 
 def test_crisis_never_calls_llm():

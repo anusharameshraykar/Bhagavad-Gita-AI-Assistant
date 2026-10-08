@@ -73,10 +73,15 @@ st.markdown(
             padding-bottom: 1rem !important;
         }
 
+        div[data-testid="stLayoutWrapper"]:has(> .stVerticalBlock.st-key-chat_history) {
+            height: max(100px, min(560px, calc(100vh - 400px))) !important;
+            max-height: max(100px, calc(100vh - 400px)) !important;
+        }
+
         /* 2. Left-side Krishna image */
         div[data-testid="stImage"] img {
             width: 100%;
-            max-height: 85vh;
+            max-height: calc(100vh - 180px);
             object-fit: contain;
             border-radius: 16px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
@@ -255,14 +260,23 @@ with left_col:
         with st.popover("⚙️ Models", width="content"):
             provider = st.selectbox("LLM Provider", ["Groq", "Gemini", "Qwen"])
             if provider == "Gemini":
-                model = st.text_input("Gemini Model", value=config.GEMINI_MODEL)
+                model = st.text_input(
+                    "Gemini Model",
+                    value=config.GEMINI_MODEL,
+                    disabled=True,
+                )
             elif provider == "Groq":
-                model = st.text_input("Groq Model", value=config.GROQ_MODEL)
+                model = st.text_input(
+                    "Groq Model",
+                    value=config.GROQ_MODEL,
+                    disabled=True,
+                )
             else:
                 model = st.text_input(
                     "Qwen Model",
                     value=os.getenv("GITA_MODEL", "qwen2.5:7b"),
                     help="Must already be pulled: qwen pull <name>",
+                    disabled=True,
                 )
         if st.session_state.active_view == "Gita Chatbot" and st.button(
             "Clear chat",
@@ -292,12 +306,30 @@ with right_col:
         if "client_id" not in st.session_state:
             st.session_state.client_id = uuid.uuid4().hex[:12]
 
-        user_query = st.chat_input(
-            "e.g., What does Sri Krishna say about controlling the mind?"
-        )
+        has_conversation = bool(st.session_state.messages)
+        if has_conversation:
+            with st.bottom:
+                _, composer_col = st.columns([1, 4.5], gap="small")
+                with composer_col:
+                    user_query = st.chat_input(
+                        "e.g., What does Sri Krishna say about controlling the mind?"
+                    )
+        else:
+            user_query = st.chat_input(
+                "e.g., What does Sri Krishna say about controlling the mind?"
+            )
+
+        pending_query = st.session_state.pop("pending_question", None)
+        question_to_answer = pending_query or user_query
         request_id = None
         request_source = None
         if user_query:
+            st.session_state.messages.append({"role": "user", "content": user_query})
+            if not has_conversation:
+                st.session_state.pending_question = user_query
+                st.rerun()
+
+        if question_to_answer:
             request_id = uuid.uuid4().hex[:12]
             request_source = classify_client_source(
                 st.context.ip_address,
@@ -307,9 +339,13 @@ with right_col:
                 request_source, st.session_state.client_id, request_id
             ):
                 logging.getLogger("src.request").info("Question received.")
-            st.session_state.messages.append({"role": "user", "content": user_query})
 
-        with st.container(height=560, border=False):
+        with st.container(
+            height=560,
+            border=False,
+            key="chat_history",
+            autoscroll=True,
+        ):
             for msg in st.session_state.messages:
                 with st.chat_message(msg["role"]):
                     st.markdown(msg["content"])
@@ -322,7 +358,7 @@ with right_col:
                     render_web_sources(msg.get("web_sources", []))
             response_slot = st.empty()
 
-        if user_query:
+        if question_to_answer:
             assert request_id is not None and request_source is not None
             with response_slot.container():
                 with st.chat_message("assistant"):
@@ -348,7 +384,7 @@ with right_col:
                                 st.session_state.client_id,
                                 request_id,
                             ):
-                                result = answer_question(user_query, llm=llm)
+                                result = answer_question(question_to_answer, llm=llm)
                         except LLMUnavailable as err:
                             st.error(f"LLM Error: {err}")
                             st.stop()

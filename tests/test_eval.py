@@ -9,7 +9,7 @@ QUESTIONS = json.loads(QUESTIONS_PATH.read_text(encoding="utf-8"))
 
 
 def test_question_set_shape():
-    assert len(QUESTIONS) == 35
+    assert len(QUESTIONS) == 36
     ids = [q["id"] for q in QUESTIONS]
     assert len(ids) == len(set(ids)), "duplicate ids"
     for q in QUESTIONS:

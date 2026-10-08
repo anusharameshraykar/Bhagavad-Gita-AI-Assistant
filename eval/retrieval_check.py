@@ -21,6 +21,8 @@ QUESTIONS = [
     ("How to stay balanced in pleasure and pain?", ["BG 2.14", "BG 2.15", "BG 2.38", "BG 12.13", "BG 12.18"]),
     ("Why was Arjuna grieving at the start of the battle?", ["BG 1.28", "BG 1.29", "BG 1.30", "BG 1.47", "BG 2.7"]),
     ("What is bhakti, devotion to God?", ["BG 9.22", "BG 9.26", "BG 9.34", "BG 12.2", "BG 12.8"]),
+    ("How many paths are there for moksha?", ["BG 3.3", "BG 5.4", "BG 5.5"]),
+    ("What are the paths to moksha?", ["BG 3.3", "BG 5.4", "BG 5.5"]),
 ]
 
 

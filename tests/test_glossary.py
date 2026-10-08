@@ -22,6 +22,15 @@ def test_vocabulary_gap_terms_expand():
     assert "yama death governors" in expand_keywords("Does Krishna talk about Shani and Yama?")
 
 
+def test_moksha_path_questions_expand_to_the_explicit_twofold_path():
+    for question in (
+        "How many paths are there for moksha?",
+        "What are the paths to moksha?",
+    ):
+        expanded = expand_keywords(question)
+        assert "twofold path wisdom knowledge action yoga" in expanded
+
+
 def test_unrelated_questions_are_unchanged():
     for q in ("How can I control a restless mind?", "Explain BG 2.47", "What is anger?"):
         assert expand_query(q) == q

@@ -296,6 +296,17 @@
     "note": "Glossary coverage check (added with src/glossary.py): tests that the Sanskrit-term entry works. Expected verses verified against the dataset text."
   },
   {
+    "id": "c25",
+    "type": "concept",
+    "question": "How many paths are there for moksha?",
+    "expect": [
+      "BG 3.3",
+      "BG 5.4",
+      "BG 5.5"
+    ],
+    "note": "Checks that paraphrased moksha questions retrieve the Gita's explicit twofold path of knowledge and action."
+  },
+  {
     "id": "r01",
     "type": "reference",
     "question": "Explain BG 2.47",

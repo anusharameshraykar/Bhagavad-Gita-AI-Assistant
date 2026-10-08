@@ -52,6 +52,18 @@ def test_question_produces_answer_and_verse_cards():
     assert len(at.expander) >= 1                    # verse cards
 
 
+def test_latest_conversation_is_rendered_at_bottom():
+    at = run_app()
+    at.chat_input[0].set_value("First question?").run()
+    at.chat_input[0].set_value("Second question?").run()
+
+    question_positions = [
+        next(index for index, element in enumerate(at.markdown) if question in element.value)
+        for question in ("First question?", "Second question?")
+    ]
+    assert question_positions[0] < question_positions[1]
+
+
 def test_direct_reference_shows_that_verse_card():
     at = run_app()
     at.chat_input[0].set_value("Explain BG 2.47").run()
@@ -91,6 +103,7 @@ def test_model_options_are_hidden_until_toggled():
     at.toggle[0].set_value(True).run()
     assert not at.exception
     assert at.selectbox[0].options == ["Gemini", "Groq", "Ollama"]
+    assert all(widget.disabled for widget in at.text_input)
     at.selectbox[0].select("Groq").run()
     assert not at.exception
     assert any(widget.label == "Groq model" for widget in at.text_input)
